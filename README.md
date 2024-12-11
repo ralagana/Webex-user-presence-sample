@@ -2,7 +2,7 @@
 
 Basic KitchenSink Sample to perform manual tests on Webex user presence. You can get your own presence, or someone else's presence. 
 
-This sample uses the [Webex JS SDK internal-plugin-presence package](https://github.com/webex/webex-js-sdk/tree/master/packages/%40webex/internal-plugin-presence).
+This sample uses the [Webex JS SDK internal-plugin-presence package](https://github.com/webex/webex-js-sdk/tree/master/packages/%40webex/internal-plugin-presence). Just add your token and initialize the SDK, then start using the functions to get user, subscribe to user events, etc.
 
 ## Prerequisites
 
