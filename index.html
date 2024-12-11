@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webex Click-to-Call Test App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        #app-container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            text-align: left;
+            width: 600px;
+        }
+
+        #guest-container button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            width: auto; /* Full width minus padding */
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: block;
+        }
+
+        #guest-container input {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #guest-container button:hover {
+            background-color: #0056b3;
+        }
+
+        #callButton {
+            background-color: #28a745;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: auto; /* Automatic width based on content */
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: center;
+        }
+
+        #callButton:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container" >
+        <h1>Webex Click-to-Call</h1>
+        <div id="guest-container" class="hidden">
+            <input id="guest-token" name="jwtToken" placeholder="Guest Token" value="" type="text">
+            <button type="button" onclick="getGuestToken()">Generate Guest Token</button>
+            <input id="jwt-token-for-dest" name="jwtToken" placeholder="JWE token for destination" value="" type="text">
+            <button type="button" onclick="getJweToken()">Generate JWE</button>
+        </div>
+        <button id="callButton">Call</button>
+        <p id="message"></p>
+    </div>
+    <script src="https://unpkg.com/webex@3.6.0-next.9/umd/calling.min.js"></script>
+    <script src="./app.js"></script>
+</body>
+</html>
