@@ -1,64 +1,77 @@
-// Globals
-let service_app_token = 'SERVICE_APP_TOKEN';   // Update this value with your token
+/* eslint-env browser */
 
-const guestToken = document.querySelector('#guest-token');
-const jweToken = document.querySelector('#jwt-token-for-dest');
-const message = document.querySelector('#message');
+/* global Webex */
 
-async function getGuestToken() {
-    const myHeaders = new Headers();
-    myHeaders.append("Content-Type", "application/json");
-    myHeaders.append("Authorization", `Bearer ${service_app_token}`);
-  
-    const raw = JSON.stringify({
-      "subject": "Webex Click To Call Demo",
-      "displayName": "WebexOne Demo"
-    });
-  
-    const request = {
-      method: "POST",
-      headers: myHeaders,
-      body: raw,
-      redirect: "follow"
-    };
-  
-    const response = await fetch("https://webexapis.com/v1/guests/token", request);
-    const data = await response.json();
-    
-    if (data.accessToken) {
-      guestToken.value = data.accessToken;
-    }
-}
-  
-async function getJweToken() {
-    const myHeaders = new Headers();
-    myHeaders.append("Content-Type", "application/json");
-    myHeaders.append("Authorization", `Bearer ${service_app_token}`);
-  
-    const payload =  JSON.stringify({
-      "calledNumber": "HUNT_GROUP_OR_CALL_QUEUE", // Update destination queue number here
-      "guestName": "Harvey"
-    });
-  
-    const request = {
-      method: "POST",
-      headers: myHeaders,
-      body: payload,
-      redirect: "follow"
-    };
-    
-    const response = await fetch("https://webexapis.com/v1/telephony/click2call/callToken", request);
-    const result = await response.json();
-    if (result.callToken) {
-      jweToken.value = result.callToken;
-    }
+/* eslint-disable no-console */
+/* eslint-disable require-jsdoc */
+
+// Declare some globals that we'll need throughout.
+let webex;
+let enableProd = true;
+let subscribedUserIds = [];
+
+const credentialsFormElm = document.querySelector('#credentials');
+const tokenElm = document.querySelector('#access-token');
+const saveElm = document.querySelector('#access-token-save');
+const authStatusElm = document.querySelector('#access-token-status');
+const selfPresenceElm = document.querySelector('#self-presence-status');
+const selfPresenceBtn = document.querySelector('#sd-get-self-presence');
+const setPresenceStatusElm = document.querySelector('#set-presence');
+const setPresenceTtl = document.querySelector('#presence-ttl');
+const setPresenceBtn = document.querySelector('#sd-set-self-presence');
+const getPresenceBtn = document.querySelector('#sd-get-user-presence');
+const getUserPresenceElm = document.querySelector('#get-user-presence');
+const userPresenceStatusElm = document.querySelector('#user-presence-status');
+const presenceNotifications = document.querySelector('#subscribe-presence-notifications');
+const usersToSubOrUnsub = document.querySelector('#subscribe-id');
+const subscribePresenceBtn = document.querySelector('#subscribe-presence');
+const unsubscribePresenceBtn = document.querySelector('#unsubscribe-presence');
+const subscribeNotificationBox = document.querySelector('#subscribe-presence-notifications');
+
+// Store and Grab `access-token` from localstorage
+if (localStorage.getItem('date') > new Date().getTime()) {
+    tokenElm.value = localStorage.getItem('access-token');
+} else {
+    localStorage.removeItem('access-token');
 }
 
-async function getWebexConfig() {
+tokenElm.addEventListener('change', (event) => {
+    localStorage.setItem('access-token', event.target.value);
+    localStorage.setItem('date', new Date().getTime() + 12 * 60 * 60 * 1000);
+});
+
+function changeEnv() {
+    enableProd = !enableProd;
+    enableProduction.innerHTML = enableProd ? 'In Production' : 'In Integration';
+}
+
+function updateStatus(enabled) {
+    selfPresenceBtn.disabled = !enabled;
+    setPresenceBtn.disabled = !enabled;
+    getPresenceBtn.disabled = !enabled;
+    subscribePresenceBtn.disabled = !enabled;
+    unsubscribePresenceBtn.disabled = !enabled;
+}
+
+
+async function initWebex(e) {
+    e.preventDefault();
+    console.log('Authentication#initWebex()');
+  
+    tokenElm.disabled = true;
+    saveElm.disabled = true;
+    selfPresenceBtn.disabled = true;
+    setPresenceBtn.disabled = true;
+    getPresenceBtn.disabled = true;
+    subscribePresenceBtn.disabled = true;
+    unsubscribePresenceBtn.disabled = true;
+
+    authStatusElm.innerText = 'initializing...';
+  
     const webexConfig = {
       config: {
         logger: {
-          level: "debug", // set the desired log level
+          level: 'debug', // set the desired log level
         },
         meetings: {
           reconnection: {
@@ -75,96 +88,118 @@ async function getWebexConfig() {
         dss: {},
       },
       credentials: {
-        access_token: guestToken.value,
-      },
+        access_token: "MWM4NjZmM2MtYzc3OS00NTVhLWE5MTItYWIzYTJhYjc3NDdmMDVkMmFmM2ItN2Zk_P0A1_1d68966b-7ea5-4896-b1ab-fbcaaeb473f8"
+      }
     };
   
-    return webexConfig;
-} 
-  
-async function getCallingConfig() {
-    const clientConfig = {
-        calling: true,
-        callHistory: true,
-    };
-    
-    const loggerConfig = {
-        level: "info",
-    };
-    
-    const serviceData = { indicator: 'guestcalling', domain: '', guestName: 'Harvey'};
-    
-    const callingClientConfig = {
-        logger: loggerConfig,
+    if (!enableProd) {
+      webexConfig.config.services = {
         discovery: {
-          region: "US-EAST",
-          country: "US",
+          u2c: 'https://u2c-intb.ciscospark.com/u2c/api/v1',
+          hydra: 'https://apialpha.ciscospark.com/v1/',
         },
-        serviceData,
-        jwe: jweToken.value
+      };
     }
   
-    const callingConfig = {
-        clientConfig: clientConfig,
-        callingClientConfig: callingClientConfig,
-        logger: loggerConfig,
-    };
-    
-    return callingConfig;
+    webex = window.webex = Webex.init(webexConfig);
+
+    webex.once('ready', () => {
+        console.log('Authentication#initWebex() :: Webex Ready');
+        authStatusElm.innerText = 'Webex is ready. Saved access token!';
+    });
+
+    webex.messages.listen()
+        .then(() => {
+          updateStatus(true);
+         })
+        .catch((err) => {
+          console.error(`error listening to messages: ${err}`);
+        });
 }
   
-// Function to initialize Webex and make a call
-const initializeCallingAndMakeCall = async () => {
-    const webexConfig = await getWebexConfig();
-    const callingConfig = await getCallingConfig();
-    message.textContent = 'Please wait...connecting to the available agent';
+credentialsFormElm.addEventListener('submit', initWebex);
+  
 
-    let callingClient;
-    try {
-        
-        // Initialize the Webex Calling SDK
-        const calling = await Calling.init({webexConfig, callingConfig});
-
-        // Create a call
-        calling.on("ready", () => {
-            calling.register().then(async () => {
-                callingClient = window.callingClient = calling.callingClient;
-    
-                const localAudioStream = await Calling.createMicrophoneStream({audio: true});
-                const line = Object.values(callingClient.getLines())[0];
-    
-                line.on('registered', (lineInfo) => {
-                    console.log('Line information: ', lineInfo);
-                  
-                    // Create call object
-                    const call = line.makeCall();
-    
-
-                    // Setup outbound call events
-                    call.on('progress', (correlationId) => {
-                        // Add ringback on progress
-                    });
-   
-                    call.on('connect', (correlationId) => {
-                        message.textContent = '';
-                    });
-                
-                    call.on('remote_media', (track) => {
-                    });
-                
-                    call.on('disconnect', (correlationId) => {
-                    });
-
-                    // Trigger an outbound call
-                    call.dial(localAudioStream);
-                });
-                line.register();
-            });
+function getSelfPresence() {
+    console.log('Presence enabled: ', webex.internal.presence.isEnabled());
+    webex.internal.presence.get(webex.internal.device.userId)
+        .then((res) => {
+            selfPresenceElm.innerText = JSON.stringify(res, null, 2);
+        })
+        .catch((error) => {
+            console.log('Error while fetching self presence status', error);
+            selfPresenceElm.innerText = 'Error while fetching self presence status';
         });
-    } catch (error) {
-        console.error('Error initiating call', error);
-    }
-};
+}
 
-// Add event listener to the button
-document.getElementById('callButton').addEventListener('click', initializeCallingAndMakeCall);
+function setSelfPresence() {
+    const status = setPresenceStatusElm.value;
+    const ttl = setPresenceTtl.value;
+    webex.internal.presence.setStatus(status, ttl)
+        .then(() => {
+            console.log('Set status for the user successfully');
+        })
+        .catch((error) => {
+            console.log('Error occurred while setting user\'s status', error);
+        })
+}
+
+function getUserPresence() {
+    const userId = getUserPresenceElm.value.trim();
+    webex.internal.presence.get(userId)
+        .then((response) => {
+                userPresenceStatusElm.innerText = JSON.stringify(response, null, 2);
+            })
+        .catch((error) => {
+            console.log('Error occurred while trying to get user\'s presence', error);
+        })
+}
+
+function handlePresenceUpdate(payload) {
+    let value = subscribeNotificationBox.innerText;
+    value += '\n\n';
+    value += JSON.stringify(payload.data, null, 2);
+    subscribeNotificationBox.innerText = value;
+}
+
+function setupPresenceListener() {
+    webex.internal.mercury.on('event:apheleia.subscription_update', handlePresenceUpdate);
+}
+
+function removePresenceListener() {
+    webex.internal.mercury.off('event:apheleia.subscription_update', handlePresenceUpdate);
+}
+
+function subscribePresence() {
+    const ids = usersToSubOrUnsub.value.trim().split(',');
+    if (subscribedUserIds.length == 0) {
+        setupPresenceListener();
+    }
+    webex.internal.presence.subscribe(ids)
+        .then(() => {
+            console.log('successfully subscribed');
+            ids.map((id) => subscribedUserIds.push(id));
+        })
+        .catch((error) => {
+            console.log('encountered error while subscribing', error);
+        })
+}
+
+function removeFromArray(A, B) {
+    return A.filter(element => !B.includes(element));
+}
+
+function unsubscribePresence() {
+    const ids = usersToSubOrUnsub.value.trim().split(',');
+    if (subscribedUserIds.length == 0) {
+        removePresenceListener();
+    }
+    webex.internal.presence.unsubscribe(ids)
+        .then(() => {
+            console.log('successfully unsubscribed');
+            subscribedUserIds = removeFromArray(subscribedUserIds, ids);
+        })
+        .catch((error) => {
+            console.log('encountered error while unsubscribing', error);
+        })
+}
