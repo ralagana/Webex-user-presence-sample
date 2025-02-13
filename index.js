@@ -88,7 +88,7 @@ async function initWebex(e) {
         dss: {},
       },
       credentials: {
-        access_token: "MWM4NjZmM2MtYzc3OS00NTVhLWE5MTItYWIzYTJhYjc3NDdmMDVkMmFmM2ItN2Zk_P0A1_1d68966b-7ea5-4896-b1ab-fbcaaeb473f8"
+        access_token: tokenElm.value
       }
     };
   
